@@ -31,3 +31,19 @@ export interface RPSGameState extends BaseGameState {
   maxRounds: number;
   scores: Record<string, number>;
 }
+
+// Connect Four specific types
+export type ConnectFourDisc = 'R' | 'Y';
+export type ConnectFourCell = ConnectFourDisc | null;
+/** 6 rows x 7 columns, row 0 is the top of the board */
+export type ConnectFourBoard = ConnectFourCell[][];
+
+export interface ConnectFourMove {
+  column: number;
+}
+
+export interface ConnectFourGameState extends BaseGameState {
+  board: ConnectFourBoard;
+  playerDiscs: Record<string, ConnectFourDisc>;
+  lastMove?: { row: number; column: number };
+}

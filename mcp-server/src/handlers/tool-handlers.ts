@@ -62,7 +62,7 @@ export const TOOL_DEFINITIONS = [
         },
         move: {
           type: 'object',
-          description: 'The move to make. For tic-tac-toe: { row: number, col: number } (0-indexed). For rock-paper-scissors: { choice: "rock" | "paper" | "scissors" }',
+          description: 'The move to make. For tic-tac-toe: { row: number, col: number } (0-indexed). For rock-paper-scissors: { choice: "rock" | "paper" | "scissors" }. For connect-four: { column: number } (0-indexed, 0-6)',
         },
       },
       required: ['gameId', 'gameType', 'move'],
@@ -125,6 +125,11 @@ export const TOOL_DEFINITIONS = [
           type: 'string',
           enum: ['X', 'O'],
           description: 'For tic-tac-toe: your symbol (X goes first, O goes second). LEAVE EMPTY to trigger interactive setup - do not auto-select X.'
+        },
+        playerColor: {
+          type: 'string',
+          enum: ['red', 'yellow'],
+          description: 'For connect-four: your disc colour (red goes first, yellow goes second). LEAVE EMPTY to trigger interactive setup - do not auto-select red.'
         },
         maxRounds: {
           type: 'number',
@@ -243,6 +248,9 @@ async function createGameWithElicitation(gameType: string, gameId?: string, serv
     if (typeof toolArgs.maxRounds === 'number') {
       elicitationOptions.maxRounds = toolArgs.maxRounds;
     }
+    if (typeof toolArgs.playerColor === 'string') {
+      elicitationOptions.playerColor = toolArgs.playerColor;
+    }
   }
   const elicitationResult = await elicitGameCreationPreferences(server, gameType, elicitationOptions)
 
@@ -257,7 +265,7 @@ async function createGameWithElicitation(gameType: string, gameId?: string, serv
     }
 
     if (elicitationResult.action === 'accept' && elicitationResult.content) {
-  const { difficulty, playerName, playerSymbol, maxRounds } = elicitationResult.content
+  const { difficulty, playerName, playerSymbol, maxRounds, playerColor } = elicitationResult.content
       
       // Prepare game creation parameters
   const finalPlayerName = (playerName as string) || 'Player'
@@ -270,6 +278,9 @@ async function createGameWithElicitation(gameType: string, gameId?: string, serv
       }
       if (gameType === 'rock-paper-scissors' && maxRounds) {
         gameSpecificOptions.maxRounds = maxRounds
+      }
+      if (gameType === 'connect-four' && playerColor) {
+        gameSpecificOptions.playerColor = playerColor
       }
       
       // Create the game with elicited preferences
@@ -292,6 +303,10 @@ async function createGameWithElicitation(gameType: string, gameId?: string, serv
       }
       if (gameType === 'rock-paper-scissors' && maxRounds) {
         gameResult.message += ` Playing ${maxRounds} rounds.`
+      }
+      if (gameType === 'connect-four' && playerColor) {
+        gameResult.message += ` You are ${playerColor}.`
+        gameResult.message += playerColor === 'red' ? ' You go first!' : ' AI goes first!'
       }
       
       return gameResult

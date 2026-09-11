@@ -31,6 +31,45 @@ describe('Elicitation Handlers', () => {
   })
 
   describe('elicitGameCreationPreferences', () => {
+    describe('Connect Four Game', () => {
+      const gameType = 'connect-four'
+
+      it('should ask for difficulty, disc colour and name when nothing is provided', async () => {
+        const elicitationResponse: ElicitationResult = {
+          action: 'accept',
+          content: { difficulty: 'hard', playerColor: 'yellow', playerName: 'NewPlayer' }
+        }
+        mockServer.elicitInput.mockResolvedValue(elicitationResponse)
+
+        const result = await elicitGameCreationPreferences(mockServer, gameType)
+
+        expect(mockServer.elicitInput).toHaveBeenCalledWith({
+          message: expect.stringContaining("Let's set up your connect four game!"),
+          requestedSchema: expect.objectContaining({
+            properties: expect.objectContaining({
+              difficulty: expect.objectContaining({ enum: DIFFICULTIES }),
+              playerColor: expect.objectContaining({ type: 'string', enum: ['red', 'yellow'] }),
+              playerName: expect.objectContaining({ type: 'string' })
+            }),
+            required: ['difficulty']
+          })
+        })
+        expect(result).toEqual(elicitationResponse)
+      })
+
+      it('should fall back to red when elicitation fails', async () => {
+        mockServer.elicitInput.mockRejectedValue(new Error('not supported'))
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const result = await elicitGameCreationPreferences(mockServer, gameType)
+
+        expect(result).toEqual({
+          action: 'accept',
+          content: { difficulty: DEFAULT_AI_DIFFICULTY, playerName: DEFAULT_PLAYER_NAME, playerColor: 'red' }
+        })
+      })
+    })
+
     describe('Tic-Tac-Toe Game', () => {
       const gameType = 'tic-tac-toe'
 

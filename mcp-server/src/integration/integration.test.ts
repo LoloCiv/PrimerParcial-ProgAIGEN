@@ -29,7 +29,12 @@ vi.mock('@turn-based-mcp/shared', async (importOriginal) => {
         getValidMoves: vi.fn(() => [{ row: 0, col: 0 }])
       }
     }),
-    RockPaperScissorsGame: vi.fn(function() { return {} })
+    RockPaperScissorsGame: vi.fn(function() { return {} }),
+    ConnectFourGame: vi.fn(function() {
+      return {
+        getValidMoves: vi.fn(() => [{ column: 3 }])
+      }
+    })
   }
 })
 
@@ -47,6 +52,14 @@ vi.mock('../ai/rock-paper-scissors-ai.js', () => ({
   RockPaperScissorsAI: vi.fn(function() {
     return {
       makeChoice: vi.fn(() => 'rock')
+    }
+  })
+}))
+
+vi.mock('../ai/connect-four-ai.js', () => ({
+  ConnectFourAI: vi.fn(function() {
+    return {
+      makeMove: vi.fn(() => ({ column: 3 }))
     }
   })
 }))
@@ -76,7 +89,7 @@ describe('MCP Server Integration', () => {
       
       // Should include game type resources
   const gameTypeResources = (result.resources as Array<{ uri: string }>).filter(r => r.uri.match(/^game:\/\/[^/]+$/))
-      expect(gameTypeResources.length).toBe(2) // tic-tac-toe, rock-paper-scissors
+      expect(gameTypeResources.length).toBe(3) // tic-tac-toe, rock-paper-scissors, connect-four
       
       // Should include individual game resources
   const individualGameResources = (result.resources as Array<{ uri: string }>).filter(r => r.uri.match(/^game:\/\/[^/]+\/[^/]+$/))
@@ -182,6 +195,104 @@ describe('MCP Server Integration', () => {
   expect(playResult.message).toContain('AI made move')
     })
 
+    it('should create connect-four game correctly', async () => {
+      vi.mocked(httpClient.createGameViaAPI).mockResolvedValue({
+        gameState: {
+          id: 'c4-game',
+          status: 'playing',
+          players: { player1: 'Test Player', ai: 'AI' }
+        }
+      })
+
+      const result = await handleToolCall('create_game', { gameType: 'connect-four' }) as any
+
+      expect(result.gameId).toBe('c4-game')
+      expect(result.message).toContain('Created new Connect Four game')
+    })
+
+    it('should pass the chosen disc colour when creating a connect-four game', async () => {
+      const mockCreateGameViaAPI = vi.mocked(httpClient.createGameViaAPI)
+      mockCreateGameViaAPI.mockResolvedValue({
+        gameState: { id: 'c4-game', status: 'playing' }
+      })
+      const server = { elicitInput: vi.fn() }
+
+      const result = await handleToolCall('create_game', {
+        gameType: 'connect-four',
+        difficulty: 'hard',
+        playerName: 'TestPlayer',
+        playerColor: 'yellow'
+      }, server) as any
+
+      expect(server.elicitInput).not.toHaveBeenCalled()
+      expect(mockCreateGameViaAPI).toHaveBeenCalledWith('connect-four', 'TestPlayer', undefined, 'hard', { playerColor: 'yellow' })
+      expect(result.message).toContain('AI goes first')
+    })
+
+    it('should play a connect-four AI move correctly', async () => {
+      vi.mocked(httpClient.getGameViaAPI).mockResolvedValue({
+        gameState: { id: 'c4-game', status: 'playing', currentPlayerId: 'ai' },
+        difficulty: 'hard'
+      })
+      const mockSubmitMoveViaAPI = vi.mocked(httpClient.submitMoveViaAPI)
+      mockSubmitMoveViaAPI.mockResolvedValue({
+        gameState: { id: 'c4-game', status: 'playing', currentPlayerId: 'player1' }
+      })
+
+      const result = await handleToolCall('play_game', { gameId: 'c4-game', gameType: 'connect-four' }) as any
+
+      expect(mockSubmitMoveViaAPI).toHaveBeenCalledWith('connect-four', 'c4-game', { column: 3 }, 'ai')
+      expect(result.aiMove).toEqual({ column: 3 })
+      expect(result.message).toContain('AI dropped a disc in column 4')
+    })
+
+    it('should make a connect-four move for the player', async () => {
+      vi.mocked(httpClient.getGameViaAPI).mockResolvedValue({
+        gameState: { id: 'c4-game', status: 'playing', currentPlayerId: 'player1' }
+      })
+      const mockSubmitMoveViaAPI = vi.mocked(httpClient.submitMoveViaAPI)
+      mockSubmitMoveViaAPI.mockResolvedValue({
+        gameState: { id: 'c4-game', status: 'playing', currentPlayerId: 'ai' }
+      })
+
+      const result = await handleToolCall('make_player_move', {
+        gameId: 'c4-game',
+        gameType: 'connect-four',
+        move: { column: 0 }
+      }) as any
+
+      expect(mockSubmitMoveViaAPI).toHaveBeenCalledWith('connect-four', 'c4-game', { column: 0 }, 'player1')
+      expect(result.message).toContain('Player dropped a disc in column 1')
+    })
+
+    it('should analyze a connect-four game', async () => {
+      vi.mocked(httpClient.getGameViaAPI).mockResolvedValue({
+        gameState: {
+          id: 'c4-game',
+          status: 'playing',
+          currentPlayerId: 'ai',
+          board: Array.from({ length: 6 }, () => Array(7).fill(null)),
+          playerDiscs: { player1: 'R', ai: 'Y' }
+        },
+        history: []
+      })
+
+      const result = await handleToolCall('analyze_game', { gameId: 'c4-game', gameType: 'connect-four' }) as any
+
+      expect(result.validMoves).toEqual([{ column: 3 }])
+      expect(result.analysis).toContain('Current Board')
+    })
+
+    it('should report a finished connect-four game when waiting for the player', async () => {
+      vi.mocked(httpClient.getGameViaAPI).mockResolvedValue({
+        gameState: { id: 'c4-game', status: 'finished', winner: 'player1', currentPlayerId: 'ai' }
+      })
+
+      const result = await handleToolCall('wait_for_player_move', { gameId: 'c4-game', gameType: 'connect-four' }) as any
+
+      expect(result.status).toBe('game_finished')
+    })
+
     it('should handle invalid tool names', async () => {
       await expect(handleToolCall('invalid_tool', {}))
         .rejects.toThrow('Unknown tool: invalid_tool')
@@ -224,6 +335,23 @@ describe('MCP Server Integration', () => {
       })
       
       expect(result.messages[0].content.text).toContain('Perfect play is required')
+    })
+
+    it('should include the connect four rules prompt', async () => {
+      const { prompts } = await listPrompts()
+      expect(prompts.map(p => p.name)).toContain('connect_four_rules')
+
+      const result = await getPrompt('connect_four_rules')
+      expect(result.messages[0].content.text).toContain('Please explain how to play Connect Four')
+    })
+
+    it('should give connect four strategy for hard difficulty', async () => {
+      const result = await getPrompt('difficulty_strategy_guide', {
+        gameType: 'connect-four',
+        difficulty: 'hard'
+      })
+
+      expect(result.messages[0].content.text).toContain('center column')
     })
 
     it('should handle invalid prompt names', async () => {

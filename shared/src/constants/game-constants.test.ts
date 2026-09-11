@@ -17,8 +17,8 @@ import {
 describe('Game Constants', () => {
   describe('GAME_TYPES', () => {
     it('should contain expected game types', () => {
-      expect(GAME_TYPES).toEqual(['tic-tac-toe', 'rock-paper-scissors'])
-      expect(GAME_TYPES).toHaveLength(2)
+      expect(GAME_TYPES).toEqual(['tic-tac-toe', 'rock-paper-scissors', 'connect-four'])
+      expect(GAME_TYPES).toHaveLength(3)
     })
     
     it('should be immutable array', () => {
@@ -68,6 +68,7 @@ describe('Game Constants', () => {
       it('should return true for valid game types', () => {
         expect(isSupportedGameType('tic-tac-toe')).toBe(true)
         expect(isSupportedGameType('rock-paper-scissors')).toBe(true)
+        expect(isSupportedGameType('connect-four')).toBe(true)
       })
 
       it('should return false for invalid game types', () => {

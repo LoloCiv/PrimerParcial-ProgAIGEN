@@ -9,7 +9,7 @@ It is a modern turn-based games platform featuring a Next.js 15 frontend (and AP
 - **Next.js Web Application**: Modern, responsive UI built with TailwindCSS 4
 - **MCP Server**: AI opponent powered by Model Context Protocol
 - **Shared Logic**: Common game logic and types across all packages
-- **Multiple Games**: Tic-Tac-Toe and Rock Paper Scissors (extensible for more)
+- **Multiple Games**: Tic-Tac-Toe, Rock Paper Scissors and Connect Four (extensible for more)
 - **AI Difficulty Levels**: Easy, Medium, and Hard AI opponents
 - **Real-time Gameplay**: Smooth, interactive game experience
 - **Comprehensive Testing**: Hundreds of test cases across all workspaces with high coverage on core logic
@@ -47,6 +47,12 @@ turn-based-mcp/
 - AI strategies: Random, Adaptive (learns from patterns), Pattern-based
 - Score tracking and round history
 
+### Connect Four
+- Classic 6x7 grid: discs fall to the lowest empty cell of the chosen column
+- Win with four in a row horizontally, vertically or diagonally
+- AI difficulty levels: Easy (random), Medium (win/block/center), Hard (minimax with alpha-beta, 6 moves ahead)
+- Choose your disc colour: red moves first, yellow lets the AI start
+
 ## API Endpoints
 
 ### Tic-Tac-Toe
@@ -60,6 +66,13 @@ turn-based-mcp/
 - `POST /api/games/rock-paper-scissors` - Create new game  
 - `POST /api/games/rock-paper-scissors/[id]/move` - Make a move
 - `GET /api/games/rock-paper-scissors/mcp` - MCP integration endpoint (sanitized data)
+
+### Connect Four
+- `GET /api/games/connect-four` - List all games
+- `POST /api/games/connect-four` - Create new game (`playerName`, `difficulty`, `playerColor`)
+- `DELETE /api/games/connect-four?gameId=...` - Delete a game
+- `POST /api/games/connect-four/[id]/move` - Make a move (`{ move: { column: 0-6 }, playerId }`)
+- `GET /api/games/connect-four/mcp` - MCP integration endpoint
 
 ## MCP Tools
 

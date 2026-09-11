@@ -7,12 +7,13 @@
 
 import { httpGet, httpPost, WEB_API_BASE } from '@turn-based-mcp/shared'
 import type { GameSession } from '@turn-based-mcp/shared'
-import type { TicTacToeGameState, RPSGameState } from '@turn-based-mcp/shared'
+import type { TicTacToeGameState, RPSGameState, ConnectFourGameState } from '@turn-based-mcp/shared'
 
 // Union of supported game session types the MCP server cares about
 export type SupportedGameSession =
   | GameSession<TicTacToeGameState>
   | GameSession<RPSGameState>
+  | GameSession<ConnectFourGameState>
 
 // Narrowed lightweight shape used internally when we just need core fields
 type MinimalGameState = {
@@ -32,7 +33,7 @@ export interface GenericGameStateWrapper {
   [k: string]: unknown
 }
 interface CreateGameOptions { [k: string]: unknown }
-interface MovePayload { choice?: string; row?: number; col?: number; [k: string]: unknown }
+interface MovePayload { choice?: string; row?: number; col?: number; column?: number; [k: string]: unknown }
 
 /**
  * Generic game state fetcher for resources

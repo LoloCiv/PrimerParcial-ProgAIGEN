@@ -44,6 +44,31 @@ export async function elicitGameCreationPreferences(
       },
       required: ["difficulty"]
     },
+    'connect-four': {
+      type: "object",
+      properties: {
+        difficulty: {
+          type: "string",
+          enum: DIFFICULTIES,
+          title: "AI Difficulty Level",
+          description: "How many moves ahead should the AI think?"
+        },
+        playerColor: {
+          type: "string",
+          enum: ["red", "yellow"],
+          title: "Your Disc Colour",
+          description: "Do you want to be red (goes first) or yellow (goes second)?",
+          default: "red"
+        },
+        playerName: {
+          type: "string",
+          title: "Player Name",
+          description: "What should we call you in the game?",
+          default: DEFAULT_PLAYER_NAME
+        }
+      },
+      required: ["difficulty"]
+    },
     'rock-paper-scissors': {
       type: "object", 
       properties: {
@@ -130,7 +155,8 @@ export async function elicitGameCreationPreferences(
         difficulty: existingArgs?.difficulty || DEFAULT_AI_DIFFICULTY,
         playerName: existingArgs?.playerName || DEFAULT_PLAYER_NAME,
         ...(gameType === 'rock-paper-scissors' && { maxRounds: existingArgs?.maxRounds || 3 }),
-        ...(gameType === 'tic-tac-toe' && { playerSymbol: existingArgs?.playerSymbol || "X" })
+        ...(gameType === 'tic-tac-toe' && { playerSymbol: existingArgs?.playerSymbol || "X" }),
+        ...(gameType === 'connect-four' && { playerColor: existingArgs?.playerColor || "red" })
       }
     }
   }
@@ -224,7 +250,7 @@ export async function elicitGameCompletionFeedback(
       gameTypeForNext: {
         type: "string",
         enum: ["same", ...GAME_TYPES],
-        enumNames: ["Same Game", "Tic-Tac-Toe", "Rock Paper Scissors"],
+        enumNames: ["Same Game", "Tic-Tac-Toe", "Rock Paper Scissors", "Connect Four"],
         title: "If playing again, which game?",
         description: "Choose the game type for your next match"
       },

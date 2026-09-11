@@ -4,21 +4,24 @@
 
 import { TicTacToeAI } from '../ai/tic-tac-toe-ai.js'
 import { RockPaperScissorsAI } from '../ai/rock-paper-scissors-ai.js'
-import { TicTacToeGame, type TicTacToeGameState, type RPSGameState } from '@turn-based-mcp/shared'
+import { ConnectFourAI } from '../ai/connect-four-ai.js'
+import { TicTacToeGame, ConnectFourGame, type TicTacToeGameState, type RPSGameState, type ConnectFourGameState } from '@turn-based-mcp/shared'
 import { getGameViaAPI, submitMoveViaAPI, createGameViaAPI } from '../utils/http-client.js'
 import { DEFAULT_PLAYER_NAME, DEFAULT_AI_DIFFICULTY } from '@turn-based-mcp/shared'
 
 // Initialize AI and game instances
 const ticTacToeAI = new TicTacToeAI()
 const rpsAI = new RockPaperScissorsAI()
+const connectFourAI = new ConnectFourAI()
 const ticTacToeGame = new TicTacToeGame()
+const connectFourGame = new ConnectFourGame()
 // rpsGame instance not needed directly in this module (AI handles logic)
 
 /**
  * Helper function to read game resource
  */
 type SupportedDifficulty = 'easy' | 'medium' | 'hard'
-interface GameSessionWrapper { gameState: TicTacToeGameState | RPSGameState; difficulty?: SupportedDifficulty; history?: unknown[] }
+interface GameSessionWrapper { gameState: TicTacToeGameState | RPSGameState | ConnectFourGameState; difficulty?: SupportedDifficulty; history?: unknown[] }
 export async function readGameResource(gameType: string, gameId: string): Promise<GameSessionWrapper> {
   const uri = `game://${gameType}/${gameId}`
   try {
@@ -53,7 +56,7 @@ export async function playGame(gameType: string, gameId: string): Promise<Record
     throw new Error(`Game is not in playing state. Current status: ${gameSession.gameState.status}`)
   }
   
-  let aiMove: { row: number; col: number } | { choice: string } | undefined
+  let aiMove: { row: number; col: number } | { choice: string } | { column: number } | undefined
   let moveDescription: string
   
   // Calculate AI move based on game type
@@ -68,6 +71,12 @@ export async function playGame(gameType: string, gameId: string): Promise<Record
   const aiChoice = await rpsAI.makeChoice(gameSession.gameState as RPSGameState, difficulty as SupportedDifficulty)
       aiMove = { choice: aiChoice }
       moveDescription = `AI chose ${aiMove.choice}`
+      break
+    }
+    case 'connect-four': {
+      const move = await connectFourAI.makeMove(gameSession.gameState as ConnectFourGameState, difficulty as SupportedDifficulty)
+      aiMove = move
+      moveDescription = `AI dropped a disc in column ${move.column + 1}`
       break
     }
       
@@ -98,6 +107,7 @@ export async function playGame(gameType: string, gameId: string): Promise<Record
       }
       break
     case 'rock-paper-scissors':
+    case 'connect-four':
       response.aiMove = aiMove
       break
   }
@@ -116,7 +126,7 @@ export async function playGame(gameType: string, gameId: string): Promise<Record
 export async function analyzeGame(gameType: string, gameId: string): Promise<Record<string, unknown>> {
   // Get current game state via resource
   const gameSession = await readGameResource(gameType, gameId)
-  const gameState = gameSession.gameState as TicTacToeGameState | RPSGameState
+  const gameState = gameSession.gameState as TicTacToeGameState | RPSGameState | ConnectFourGameState
   const history = gameSession.history || []
   
   const analysis: { [k: string]: unknown } = {
@@ -217,6 +227,35 @@ export async function analyzeGame(gameType: string, gameId: string): Promise<Rec
       }
       break
       
+    case 'connect-four':
+      {
+        const cState = gameState as ConnectFourGameState
+        analysis.boardState = cState.board
+        analysis.playerDiscs = cState.playerDiscs
+        analysis.lastMove = cState.lastMove || null
+        analysis.validMoves = cState.status === 'playing' ? connectFourGame.getValidMoves(cState, cState.currentPlayerId) : []
+
+        // Board visualization, columns numbered 1-7 like the move descriptions
+        analysisText += '\nCurrent Board:\n'
+        analysisText += ' 1 2 3 4 5 6 7\n'
+        for (const row of cState.board) {
+          analysisText += `|${row.map(cell => cell ?? '.').join(' ')}|\n`
+        }
+
+        if (cState.status === 'playing') {
+          const validMoves = analysis.validMoves as Array<unknown>
+          analysisText += `\nCurrent Turn: ${cState.currentPlayerId} (${cState.playerDiscs[cState.currentPlayerId]})\n`
+          analysisText += `Valid Moves: ${validMoves.length} columns available\n`
+          analysisText += cState.currentPlayerId === 'ai'
+            ? '\nIt\'s the AI\'s turn to move.'
+            : '\nWaiting for human player to make a move.'
+        } else if (cState.status === 'finished') {
+          analysisText += `\nWinner: ${cState.winner || 'Draw'}\n`
+          analysisText += `Total moves played: ${history.length}\n`
+        }
+      }
+      break
+
     default:
       throw new Error(`Game type ${gameType} analysis not yet implemented`)
   }
@@ -236,7 +275,8 @@ export async function waitForPlayerMove(
 ): Promise<Record<string, unknown>> {
   const gameTypeNames: { [key: string]: string } = {
     'tic-tac-toe': 'Tic-Tac-Toe',
-    'rock-paper-scissors': 'Rock Paper Scissors'
+    'rock-paper-scissors': 'Rock Paper Scissors',
+    'connect-four': 'Connect Four'
   }
   
   const gameTypeName = gameTypeNames[gameType]
@@ -373,6 +413,9 @@ export async function createGame(
     case 'rock-paper-scissors':
       response.message = `Created new Rock Paper Scissors game with ID: ${gameSession.gameState.id}`
       break
+    case 'connect-four':
+      response.message = `Created new Connect Four game with ID: ${gameSession.gameState.id}`
+      break
   }
   
   return response
@@ -413,6 +456,11 @@ export async function makePlayerMove(
     case 'rock-paper-scissors': {
       const rpsMove = move as { choice: string }
       moveDescription = `Player chose ${rpsMove.choice}`
+      break
+    }
+    case 'connect-four': {
+      const connectFourMove = move as { column: number }
+      moveDescription = `Player dropped a disc in column ${connectFourMove.column + 1}`
       break
     }
     default:

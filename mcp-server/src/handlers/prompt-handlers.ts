@@ -75,6 +75,32 @@ Make it comprehensive and include both basic rules and advanced psychological st
         }
       ]
     })
+  },
+  {
+    name: 'connect_four_rules',
+    description: 'Learn how to play Connect Four and understand the rules',
+    handler: async () => ({
+      description: 'Complete guide to Connect Four rules and strategy',
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `Please explain how to play Connect Four, including:
+
+1. The objective of the game (four discs in a row)
+2. How discs fall to the lowest empty cell of the chosen column (columns 1-7)
+3. All the ways to win: horizontal, vertical and diagonal
+4. Why the center column is so valuable
+5. How to build double threats and avoid giving the opponent a winning spot
+6. How to use the MCP commands (create_game with gameType: 'connect-four', play_game with gameType: 'connect-four', make_player_move with { column: 0-6 }, wait_for_player_move)
+7. What the different AI difficulty levels do
+
+Make it comprehensive but easy to understand for someone who has never played before.`
+          }
+        }
+      ]
+    })
   }
 ]
 
@@ -141,7 +167,7 @@ Please provide detailed strategic advice based on the game type and difficulty l
             type: 'text',
             text: `I want to understand how to beat the hardest AI opponents in turn-based games. Please explain:
 
-1. How hard AI behaves in each game type (Tic-Tac-Toe, Rock Paper Scissors)
+1. How hard AI behaves in each game type (Tic-Tac-Toe, Rock Paper Scissors, Connect Four)
 2. What algorithms and strategies these AIs typically use
 3. Universal tactics for challenging hard AI (exploiting computational limits, psychological approaches, opening theory, endgame mastery)
 4. Game-specific counters and strategies for each game type
@@ -288,6 +314,11 @@ function getSpecificStrategyGuide(gameType: string, difficulty: string): string 
       easy: 'What approach works against easy Rock Paper Scissors AI? Since it makes completely random choices, any strategy works equally.',
       medium: 'How do I beat medium Rock Paper Scissors AI? I should watch for short patterns, mix my choices but avoid obvious patterns.',
       hard: 'What strategy works against hard Rock Paper Scissors AI? I need true randomness and should avoid any detectable patterns. Anti-pattern strategies might work.'
+    },
+    'connect-four': {
+      easy: 'How should I play against easy Connect Four AI? It drops discs in random columns, so I should practice lining up four and watch for its accidental threats.',
+      medium: 'What strategy works against medium Connect Four AI? It wins when it can, blocks my immediate threats and prefers the center, so I need to create two threats at once that it cannot block with a single disc.',
+      hard: 'How can I beat hard Connect Four AI? It searches several moves ahead, so I should control the center column early, avoid filling the cell below a spot the AI needs, and plan double threats deeper than its search.'
     }
   }
 

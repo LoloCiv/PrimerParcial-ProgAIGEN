@@ -29,6 +29,8 @@ export function getGameDisplayName(gameType: GameType): string {
       return 'Tic-Tac-Toe';
     case 'rock-paper-scissors':
       return 'Rock Paper Scissors';
+    case 'connect-four':
+      return 'Connect Four';
     default:
       return 'Unknown Game';
   }

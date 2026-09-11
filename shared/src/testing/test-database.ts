@@ -63,6 +63,15 @@ export async function setupTestDatabase(
     )
   `)
 
+  testDb.exec(`
+    CREATE TABLE IF NOT EXISTS connect_four_games (
+      id TEXT PRIMARY KEY,
+      game_session TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
   return testDb
 }
 
@@ -114,6 +123,7 @@ export async function clearTestDatabase(): Promise<void> {
 
   testDb.exec('DELETE FROM tic_tac_toe_games')
   testDb.exec('DELETE FROM rps_games')
+  testDb.exec('DELETE FROM connect_four_games')
 }
 
 /**

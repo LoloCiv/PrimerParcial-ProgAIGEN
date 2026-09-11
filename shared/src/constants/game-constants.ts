@@ -6,7 +6,7 @@
 /**
  * Supported game types
  */
-export const GAME_TYPES = ['tic-tac-toe', 'rock-paper-scissors'] as const
+export const GAME_TYPES = ['tic-tac-toe', 'rock-paper-scissors', 'connect-four'] as const
 
 /**
  * Available AI difficulty levels

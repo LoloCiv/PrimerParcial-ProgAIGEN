@@ -69,13 +69,17 @@ describe('Utility Functions', () => {
       expect(getGameDisplayName('rock-paper-scissors')).toBe('Rock Paper Scissors');
     });
 
+    it('should return correct display name for connect-four', () => {
+      expect(getGameDisplayName('connect-four')).toBe('Connect Four');
+    });
+
     it('should return default for unknown game type', () => {
       const unknownType = 'unknown-game' as GameType;
       expect(getGameDisplayName(unknownType)).toBe('Unknown Game');
     });
 
     it('should handle all valid game types', () => {
-      const validTypes: GameType[] = ['tic-tac-toe', 'rock-paper-scissors'];
+      const validTypes: GameType[] = ['tic-tac-toe', 'rock-paper-scissors', 'connect-four'];
       
       validTypes.forEach(type => {
         const displayName = getGameDisplayName(type);

@@ -2,7 +2,7 @@ import { vi } from 'vitest'
 import * as gameStorage from './game-storage';
 import * as sqliteStorage from './sqlite-storage';
 import type { GameSession } from '../types/game';
-import type { TicTacToeGameState, RPSGameState } from '../types/games';
+import type { TicTacToeGameState, RPSGameState, ConnectFourGameState } from '../types/games';
 
 // Mock sqlite-storage module
 vi.mock('./sqlite-storage');
@@ -54,6 +54,27 @@ describe('Game Storage', () => {
       maxRounds: 3
     },
     gameType: 'rock-paper-scissors',
+    history: []
+  };
+
+  const mockConnectFourGameSession: GameSession<ConnectFourGameState> = {
+    gameState: {
+      id: 'test-c4-1',
+      players: [
+        { id: 'player1', name: 'Player 1', isAI: false },
+        { id: 'ai', name: 'AI', isAI: true }
+      ],
+      currentPlayerId: 'player1',
+      status: 'playing',
+      createdAt: new Date('2024-01-01T10:00:00Z'),
+      updatedAt: new Date('2024-01-01T10:05:00Z'),
+      board: Array.from({ length: 6 }, () => Array(7).fill(null)),
+      playerDiscs: {
+        player1: 'R',
+        ai: 'Y'
+      }
+    },
+    gameType: 'connect-four',
     history: []
   };
 
@@ -199,6 +220,43 @@ describe('Game Storage', () => {
 
         expect(result).toBe(false);
       });
+    });
+  });
+
+  describe('Connect Four Game Functions', () => {
+    it('getConnectFourGame should delegate to sqlite storage', async () => {
+      mockSqliteStorage.getConnectFourGame.mockResolvedValue(mockConnectFourGameSession);
+
+      const result = await gameStorage.getConnectFourGame('test-c4-1');
+
+      expect(mockSqliteStorage.getConnectFourGame).toHaveBeenCalledWith('test-c4-1');
+      expect(result).toEqual(mockConnectFourGameSession);
+    });
+
+    it('setConnectFourGame should delegate to sqlite storage', async () => {
+      mockSqliteStorage.setConnectFourGame.mockResolvedValue();
+
+      await gameStorage.setConnectFourGame('test-c4-1', mockConnectFourGameSession);
+
+      expect(mockSqliteStorage.setConnectFourGame).toHaveBeenCalledWith('test-c4-1', mockConnectFourGameSession);
+    });
+
+    it('getAllConnectFourGames should delegate to sqlite storage', async () => {
+      mockSqliteStorage.getAllConnectFourGames.mockResolvedValue([mockConnectFourGameSession]);
+
+      const result = await gameStorage.getAllConnectFourGames();
+
+      expect(mockSqliteStorage.getAllConnectFourGames).toHaveBeenCalled();
+      expect(result).toEqual([mockConnectFourGameSession]);
+    });
+
+    it('deleteConnectFourGame should delegate to sqlite storage', async () => {
+      mockSqliteStorage.deleteConnectFourGame.mockResolvedValue(true);
+
+      const result = await gameStorage.deleteConnectFourGame('test-c4-1');
+
+      expect(mockSqliteStorage.deleteConnectFourGame).toHaveBeenCalledWith('test-c4-1');
+      expect(result).toBe(true);
     });
   });
 });

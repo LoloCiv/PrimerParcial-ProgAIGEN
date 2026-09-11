@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import type { GameSession } from '../types/game'
-import type { TicTacToeGameState, RPSGameState } from '../types/games'
+import type { TicTacToeGameState, RPSGameState, ConnectFourGameState } from '../types/games'
 
 // SQLite database instance
 let db: Database.Database | null = null
@@ -53,6 +53,19 @@ function initializeDatabase(): Database.Database {
 
   if (process.env.NODE_ENV !== 'test') {
     console.log('rps_games table created/verified')
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS connect_four_games (
+      id TEXT PRIMARY KEY,
+      game_session TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  if (process.env.NODE_ENV !== 'test') {
+    console.log('connect_four_games table created/verified')
     console.log('Database initialized successfully')
   }
 
@@ -206,6 +219,61 @@ export async function deleteRPSGame(gameId: string): Promise<boolean> {
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {
       console.error('Error deleting RPS game:', error)
+    }
+    return false
+  }
+}
+
+// Connect Four game operations
+export async function getConnectFourGame(gameId: string): Promise<GameSession<ConnectFourGameState> | undefined> {
+  try {
+    const row = getRow('SELECT game_session FROM connect_four_games WHERE id = ?', [gameId])
+    if (row) {
+      return JSON.parse(row.game_session as string)
+    }
+    return undefined
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error getting Connect Four game:', error)
+    }
+    return undefined
+  }
+}
+
+export async function setConnectFourGame(gameId: string, gameSession: GameSession<ConnectFourGameState>): Promise<void> {
+  try {
+    const gameSessionJson = JSON.stringify(gameSession)
+    runQuery(`
+      INSERT OR REPLACE INTO connect_four_games (id, game_session, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+    `, [gameId, gameSessionJson])
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error setting Connect Four game:', error)
+    }
+    throw error
+  }
+}
+
+export async function getAllConnectFourGames(): Promise<GameSession<ConnectFourGameState>[]> {
+  try {
+    const rows = getAllRows('SELECT game_session FROM connect_four_games ORDER BY updated_at DESC')
+    return rows.map(row => JSON.parse(row.game_session as string))
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error getting all Connect Four games:', error)
+    }
+    return []
+  }
+}
+
+export async function deleteConnectFourGame(gameId: string): Promise<boolean> {
+  try {
+    const result = runQuery('DELETE FROM connect_four_games WHERE id = ?', [gameId])
+    return result.changes > 0
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error deleting Connect Four game:', error)
     }
     return false
   }

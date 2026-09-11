@@ -47,6 +47,13 @@ describe('SQLite Storage', () => {
       expect(typeof sqliteStorage.getAllRPSGames).toBe('function');
       expect(typeof sqliteStorage.deleteRPSGame).toBe('function');
     });
+
+    it('should export Connect Four game functions', () => {
+      expect(typeof sqliteStorage.getConnectFourGame).toBe('function');
+      expect(typeof sqliteStorage.setConnectFourGame).toBe('function');
+      expect(typeof sqliteStorage.getAllConnectFourGames).toBe('function');
+      expect(typeof sqliteStorage.deleteConnectFourGame).toBe('function');
+    });
   });
 
   describe('Function signatures', () => {
@@ -62,6 +69,13 @@ describe('SQLite Storage', () => {
       expect(sqliteStorage.setRPSGame.length).toBe(2);
       expect(sqliteStorage.getAllRPSGames.length).toBe(0);
       expect(sqliteStorage.deleteRPSGame.length).toBe(1);
+    });
+
+    it('Connect Four functions should have correct arity', () => {
+      expect(sqliteStorage.getConnectFourGame.length).toBe(1);
+      expect(sqliteStorage.setConnectFourGame.length).toBe(2);
+      expect(sqliteStorage.getAllConnectFourGames.length).toBe(0);
+      expect(sqliteStorage.deleteConnectFourGame.length).toBe(1);
     });
   });
 

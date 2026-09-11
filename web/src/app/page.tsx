@@ -10,6 +10,10 @@ const AVAILABLE_GAMES: { type: GameType; description: string }[] = [
   {
     type: 'rock-paper-scissors',
     description: 'Best of 3 rounds. Rock beats scissors, scissors beats paper, paper beats rock!'
+  },
+  {
+    type: 'connect-four',
+    description: 'Drop discs into a 6x7 grid. Line up four in a row, column or diagonal to win!'
   }
 ]
 
@@ -36,7 +40,7 @@ export default function HomePage() {
       </div>
 
       {/* Games Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
         {AVAILABLE_GAMES.map((game) => (
           <div
             key={game.type}
@@ -51,6 +55,18 @@ export default function HomePage() {
                 {game.type === 'tic-tac-toe' ? (
                   <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h2v2H7V7zm4 0h2v2h-2V7zm4 0h2v2h-2V7zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2zM7 15h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
+                  </svg>
+                ) : game.type === 'connect-four' ? (
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="6" cy="6" r="2.5" />
+                    <circle cx="12" cy="6" r="2.5" />
+                    <circle cx="18" cy="6" r="2.5" />
+                    <circle cx="6" cy="12" r="2.5" />
+                    <circle cx="12" cy="12" r="2.5" />
+                    <circle cx="18" cy="12" r="2.5" />
+                    <circle cx="6" cy="18" r="2.5" />
+                    <circle cx="12" cy="18" r="2.5" />
+                    <circle cx="18" cy="18" r="2.5" />
                   </svg>
                 ) : game.type === 'rock-paper-scissors' ? (
                   <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">

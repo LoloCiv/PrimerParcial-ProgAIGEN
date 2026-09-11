@@ -7,20 +7,22 @@
   "workspaces": [
     "shared",
     "web",
-    "mcp-server"
+    "mcp-server",
+    "stats-server"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=web",
     "dev:mcp": "npm run dev --workspace=mcp-server",
-    "build": "npm run build --workspace=shared && npm run build --workspace=web && npm run build --workspace=mcp-server",
-    "type-check": "npm run type-check --workspace=shared && npm run type-check --workspace=web && npm run type-check --workspace=mcp-server",
-    "clean": "npm run clean --workspace=shared && npm run clean --workspace=web && npm run clean --workspace=mcp-server",
-    "test": "npm run test --workspace=shared && npm run test --workspace=web && npm run test --workspace=mcp-server",
+    "seed": "npm run seed --workspace=stats-server",
+    "build": "npm run build --workspace=shared && npm run build --workspace=web && npm run build --workspace=mcp-server && npm run build --workspace=stats-server",
+    "type-check": "npm run type-check --workspace=shared && npm run type-check --workspace=web && npm run type-check --workspace=mcp-server && npm run type-check --workspace=stats-server",
+    "clean": "npm run clean --workspace=shared && npm run clean --workspace=web && npm run clean --workspace=mcp-server && npm run clean --workspace=stats-server",
+    "test": "npm run test --workspace=shared && npm run test --workspace=web && npm run test --workspace=mcp-server && npm run test --workspace=stats-server",
     "test:watch": "npm run test:watch --workspace=shared",
     "test:coverage": "npm run test:coverage --workspace=shared && npm run test:coverage --workspace=web && npm run test:coverage --workspace=mcp-server",
-    "lint": "npm run lint --workspace=shared && npm run lint --workspace=web && npm run lint --workspace=mcp-server",
-    "lint:fix": "npm run lint:fix --workspace=shared && npm run lint:fix --workspace=web && npm run lint:fix --workspace=mcp-server",
-    "lint:all": "npm run lint --workspace=shared && npm run lint --workspace=web && npm run lint --workspace=mcp-server",
+    "lint": "npm run lint --workspace=shared && npm run lint --workspace=web && npm run lint --workspace=mcp-server && npm run lint --workspace=stats-server",
+    "lint:fix": "npm run lint:fix --workspace=shared && npm run lint:fix --workspace=web && npm run lint:fix --workspace=mcp-server && npm run lint:fix --workspace=stats-server",
+    "lint:all": "npm run lint --workspace=shared && npm run lint --workspace=web && npm run lint --workspace=mcp-server && npm run lint --workspace=stats-server",
     "ci:tests": "npm run test --workspace=@turn-based-mcp/shared && npm run test --workspace=@turn-based-mcp/web && npm run test --workspace=@turn-based-mcp/mcp-server",
     "ci": "npm run build --workspace=@turn-based-mcp/shared && npm run type-check && npm run build --workspace=@turn-based-mcp/web && npm run build --workspace=@turn-based-mcp/mcp-server && npm run ci:tests && npm run lint --workspace=@turn-based-mcp/web"
   },

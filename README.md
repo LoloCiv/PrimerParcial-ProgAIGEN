@@ -30,6 +30,7 @@ turn-based-mcp/
 │       ├── api/games/          # API routes for game management
 │       └── games/              # Game-specific pages
 ├── mcp-server/                  # MCP server for AI opponent
+├── stats-server/                # Read-only MCP server with win/loss statistics
 ├── docs/                        # Documentation and guidelines  
 ├── package.json                 # Root package.json with workspaces
 └── README.md
@@ -104,6 +105,26 @@ To use the MCP server, ensure it's built first:
 ```bash
 npm run build --workspace=mcp-server
 ```
+
+## Stats MCP Server (`stats-server/`)
+
+A second MCP server that opens `web/games.db` **read-only** and answers who is winning and losing.
+
+| Tool | Description |
+|------|-------------|
+| `get_leaderboard` | Ranking by wins and win rate. Filters: `gameType`, `difficulty`, `limit` |
+| `get_player_stats` | Totals by game and difficulty, current streak and last results of one player |
+| `get_ai_performance` | AI wins, losses and draws on each difficulty. Filter: `gameType` |
+| `get_recent_games` | Latest finished games, newest first. Filters: `limit`, `gameType`, `playerName` |
+
+```bash
+npm run build --workspace=stats-server
+npm run seed   # optional: adds ~40 simulated finished games to web/games.db
+```
+
+- Command for an MCP client (stdio): `node stats-server/dist/index.js`
+- The database defaults to `web/games.db`; override it with the `GAMES_DB_PATH` environment variable
+- `stats-server/src/server.ts` is the starting point for the AI-assisted refactor: it has duplicated queries, unclear names and `any` types. `src/server.test.ts` holds black-box tests over the MCP protocol that must keep passing after the refactor
 
 ## Getting Started
 

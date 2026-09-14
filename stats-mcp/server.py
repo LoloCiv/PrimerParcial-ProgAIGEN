@@ -6,298 +6,406 @@ from pathlib import Path
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-p = os.environ.get("GAMES_DB_PATH") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "games.db")
+# servidor de estadisticas
+rb = os.environ.get("GAMES_DB_PATH") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "games.db")
 
-mcp = MCPServer("game-stats")
+s = MCPServer("game-stats")
 
 
-@mcp.tool()
-def get_leaderboard(gameType: str | None = None, difficulty: str | None = None, limit: int = 10) -> str:
-    """Ranking of players by wins and win rate (only finished games). Optional filters: gameType (tic-tac-toe, rock-paper-scissors, connect-four), difficulty (easy, medium, hard), limit (default 10)"""
-    if gameType and gameType != "tic-tac-toe" and gameType != "rock-paper-scissors" and gameType != "connect-four":
-        raise ToolError("Invalid gameType: " + gameType)
-    if difficulty and difficulty != "easy" and difficulty != "medium" and difficulty != "hard":
-        raise ToolError("Invalid difficulty: " + difficulty)
-    if not os.path.exists(p):
-        raise ToolError("Games database not found at " + p + ". Play a game in the web app or run: uv run python seed.py")
-    db = sqlite3.connect(Path(p).resolve().as_uri() + "?mode=ro", uri=True)
-    d = []
-    try:
-        x = db.execute("SELECT game_session FROM tic_tac_toe_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    try:
-        x = db.execute("SELECT game_session FROM rps_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    try:
-        x = db.execute("SELECT game_session FROM connect_four_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    db.close()
-    d.sort(key=lambda x: x["gameState"]["updatedAt"])
-    o = {}
-    n = 0
-    for i in range(len(d)):
-        g = d[i]
-        if g["gameState"]["status"] != "finished":
-            continue
-        if gameType and g["gameType"] != gameType:
-            continue
-        if difficulty and (g.get("difficulty") or "medium") != difficulty:
-            continue
-        n = n + 1
-        nm = "Player"
-        for pl in g["gameState"]["players"]:
-            if not pl["isAI"]:
-                nm = pl["name"]
-        nm = nm.strip()
-        k = nm.lower()
-        if k not in o:
-            o[k] = {"player": nm, "played": 0, "wins": 0, "losses": 0, "draws": 0}
-        o[k]["played"] = o[k]["played"] + 1
-        if g["gameState"].get("winner") == "player1":
-            o[k]["wins"] = o[k]["wins"] + 1
-        elif g["gameState"].get("winner") == "ai":
-            o[k]["losses"] = o[k]["losses"] + 1
-        elif g["gameState"].get("winner") == "draw":
-            o[k]["draws"] = o[k]["draws"] + 1
-    r = list(o.values())
-    for i in range(len(r)):
-        if r[i]["played"] == 0:
-            r[i]["winRate"] = 0
+@s.tool(description="Ranking de jugadores por victorias y porcentaje de victorias (solo partidas terminadas). Filtros opcionales: tipoJuego (tic-tac-toe, rock-paper-scissors, connect-four), dificultad (easy, medium, hard), limite (por defecto 10)")
+def obtener_ranking(tipoJuego=None, dificultad=None, limite=10):
+    if tipoJuego == None or tipoJuego == "" or tipoJuego == "tic-tac-toe" or tipoJuego == "rock-paper-scissors" or tipoJuego == "connect-four":
+        if dificultad == None or dificultad == "" or dificultad == "easy" or dificultad == "medium" or dificultad == "hard":
+            if os.path.exists(rb):
+                cx = sqlite3.connect(Path(rb).resolve().as_uri() + "?mode=ro", uri=True)
+                d = []
+                # cargo todo
+                try:
+                    fl = cx.execute("SELECT game_session FROM tic_tac_toe_games").fetchall()
+                    i = 0
+                    while i < len(fl):
+                        d.append(json.loads(fl[i][0]))
+                        i = i + 1
+                except Exception:
+                    pass
+                try:
+                    fl = cx.execute("SELECT game_session FROM rps_games").fetchall()
+                    i = 0
+                    while i < len(fl):
+                        d.append(json.loads(fl[i][0]))
+                        i = i + 1
+                except Exception:
+                    pass
+                try:
+                    fl = cx.execute("SELECT game_session FROM connect_four_games").fetchall()
+                    i = 0
+                    while i < len(fl):
+                        d.append(json.loads(fl[i][0]))
+                        i = i + 1
+                except Exception:
+                    pass
+                cx.close()
+                d.sort(key=lambda x: x["gameState"]["updatedAt"])
+                o = {}
+                n = 0
+                i = 0
+                while i < len(d):
+                    pt = d[i]
+                    if pt["gameState"]["status"] == "finished":
+                        if tipoJuego == None or tipoJuego == "" or pt["gameType"] == tipoJuego:
+                            aux = "medium"
+                            if "difficulty" in pt.keys():
+                                if pt["difficulty"] != None and pt["difficulty"] != "":
+                                    aux = pt["difficulty"]
+                            if dificultad == None or dificultad == "" or aux == dificultad:
+                                n = n + 1
+                                nom = "Player"
+                                for jg in pt["gameState"]["players"]:
+                                    if jg["isAI"] == False:
+                                        nom = jg["name"]
+                                nom = nom.strip()
+                                cl = nom.lower()
+                                ex = False
+                                for c in o.keys():
+                                    if c == cl:
+                                        ex = True
+                                if ex == False:
+                                    o[cl] = {"n": nom, "j": 0, "g": 0, "p": 0, "e": 0}
+                                o[cl]["j"] = o[cl]["j"] + 1
+                                if "winner" in pt["gameState"].keys():
+                                    if pt["gameState"]["winner"] == "player1":
+                                        o[cl]["g"] = o[cl]["g"] + 1
+                                    else:
+                                        if pt["gameState"]["winner"] == "ai":
+                                            o[cl]["p"] = o[cl]["p"] + 1
+                                        else:
+                                            if pt["gameState"]["winner"] == "draw":
+                                                o[cl]["e"] = o[cl]["e"] + 1
+                    i = i + 1
+                aux2 = list(o.values())
+                i = 0
+                while i < len(aux2):
+                    if aux2[i]["j"] == 0:
+                        aux2[i]["pv"] = 0
+                    else:
+                        aux2[i]["pv"] = round(aux2[i]["g"] / aux2[i]["j"] * 1000) / 10
+                    i = i + 1
+                aux2.sort(key=lambda x: (-x["g"], -x["pv"], x["n"]))
+                aux2 = aux2[:int(str(limite))]
+                lis = []
+                i = 0
+                while i < len(aux2):
+                    lis.append({"puesto": i + 1, "jugador": aux2[i]["n"], "jugadas": aux2[i]["j"], "ganadas": aux2[i]["g"], "perdidas": aux2[i]["p"], "empatadas": aux2[i]["e"], "porcentajeVictorias": aux2[i]["pv"]})
+                    i = i + 1
+                tj = "todos"
+                if tipoJuego != None and tipoJuego != "":
+                    tj = tipoJuego
+                df = "todas"
+                if dificultad != None and dificultad != "":
+                    df = dificultad
+                res = {"filtros": {"tipoJuego": tj, "dificultad": df}, "totalPartidasTerminadas": n, "ranking": lis}
+                if n == 0:
+                    res["mensaje"] = "Todavía no hay partidas terminadas. Jugá una partida en la web."
+                return json.dumps(res, indent=2, ensure_ascii=False)
+            else:
+                raise ToolError("No se encontró la base de datos de partidas en " + rb + ". Levantá la web y jugá una partida para crearla.")
         else:
-            r[i]["winRate"] = round(r[i]["wins"] / r[i]["played"] * 1000) / 10
-    r.sort(key=lambda x: (-x["wins"], -x["winRate"], x["player"]))
-    r = r[:limit]
-    tmp = []
-    for i in range(len(r)):
-        tmp.append({"rank": i + 1, "player": r[i]["player"], "played": r[i]["played"], "wins": r[i]["wins"], "losses": r[i]["losses"], "draws": r[i]["draws"], "winRate": r[i]["winRate"]})
-    res = {"filters": {"gameType": gameType or "all", "difficulty": difficulty or "all"}, "totalFinishedGames": n, "leaderboard": tmp}
-    if n == 0:
-        res["message"] = "No finished games yet. Play a game in the web app or run: uv run python seed.py"
-    return json.dumps(res, indent=2)
+            raise ToolError("Dificultad inválida: " + str(dificultad))
+    else:
+        raise ToolError("tipoJuego inválido: " + str(tipoJuego))
 
 
-@mcp.tool()
-def get_player_stats(playerName: str) -> str:
-    """Wins, losses and draws of one player by game and difficulty, current streak and last 5 results. The name is matched ignoring case and spaces"""
-    if not playerName or playerName.strip() == "":
-        raise ToolError("playerName is required")
-    if not os.path.exists(p):
-        raise ToolError("Games database not found at " + p + ". Play a game in the web app or run: uv run python seed.py")
-    db = sqlite3.connect(Path(p).resolve().as_uri() + "?mode=ro", uri=True)
-    d = []
-    try:
-        x = db.execute("SELECT game_session FROM tic_tac_toe_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    try:
-        x = db.execute("SELECT game_session FROM rps_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    try:
-        x = db.execute("SELECT game_session FROM connect_four_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    db.close()
-    d.sort(key=lambda x: x["gameState"]["updatedAt"])
-    k = playerName.strip().lower()
-    nm = ""
-    t = {"played": 0, "wins": 0, "losses": 0, "draws": 0}
-    bg = {}
-    bd = {}
-    arr = []
-    ip = 0
-    for i in range(len(d)):
-        g = d[i]
-        pn = "Player"
-        for pl in g["gameState"]["players"]:
-            if not pl["isAI"]:
-                pn = pl["name"]
-        pn = pn.strip()
-        if pn.lower() != k:
-            continue
-        if g["gameState"]["status"] != "finished":
-            ip = ip + 1
-            continue
-        if nm == "":
-            nm = pn
-        df = g.get("difficulty") or "medium"
-        t["played"] = t["played"] + 1
-        if g["gameType"] not in bg:
-            bg[g["gameType"]] = {"played": 0, "wins": 0, "losses": 0, "draws": 0}
-        bg[g["gameType"]]["played"] = bg[g["gameType"]]["played"] + 1
-        if df not in bd:
-            bd[df] = {"played": 0, "wins": 0, "losses": 0, "draws": 0}
-        bd[df]["played"] = bd[df]["played"] + 1
-        rs = ""
-        if g["gameState"].get("winner") == "player1":
-            t["wins"] = t["wins"] + 1
-            bg[g["gameType"]]["wins"] = bg[g["gameType"]]["wins"] + 1
-            bd[df]["wins"] = bd[df]["wins"] + 1
-            rs = "win"
-        elif g["gameState"].get("winner") == "ai":
-            t["losses"] = t["losses"] + 1
-            bg[g["gameType"]]["losses"] = bg[g["gameType"]]["losses"] + 1
-            bd[df]["losses"] = bd[df]["losses"] + 1
-            rs = "loss"
-        elif g["gameState"].get("winner") == "draw":
-            t["draws"] = t["draws"] + 1
-            bg[g["gameType"]]["draws"] = bg[g["gameType"]]["draws"] + 1
-            bd[df]["draws"] = bd[df]["draws"] + 1
-            rs = "draw"
-        arr.append({"gameId": g["gameState"]["id"], "gameType": g["gameType"], "difficulty": df, "result": rs, "finishedAt": g["gameState"]["updatedAt"]})
-    if t["played"] == 0:
-        raise ToolError('No finished games found for player "' + playerName + '"')
-    t["winRate"] = round(t["wins"] / t["played"] * 1000) / 10
-    for x in bg:
-        bg[x]["winRate"] = round(bg[x]["wins"] / bg[x]["played"] * 1000) / 10
-    for x in bd:
-        bd[x]["winRate"] = round(bd[x]["wins"] / bd[x]["played"] * 1000) / 10
-    arr.reverse()
-    st = None
-    for i in range(len(arr)):
-        if st is None:
-            st = {"result": arr[i]["result"], "count": 1}
-        elif arr[i]["result"] == st["result"]:
-            st["count"] = st["count"] + 1
+@s.tool(description="Victorias, derrotas y empates de un jugador por juego y por dificultad, racha actual y últimos 5 resultados. El nombre se busca sin importar mayúsculas ni espacios")
+def obtener_estadisticas_jugador(nombreJugador):
+    if nombreJugador != None and str(nombreJugador).strip() != "":
+        if os.path.exists(rb):
+            cx = sqlite3.connect(Path(rb).resolve().as_uri() + "?mode=ro", uri=True)
+            d = []
+            try:
+                fl = cx.execute("SELECT game_session FROM tic_tac_toe_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            try:
+                fl = cx.execute("SELECT game_session FROM rps_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            try:
+                fl = cx.execute("SELECT game_session FROM connect_four_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            cx.close()
+            d.sort(key=lambda x: x["gameState"]["updatedAt"])
+            cl = str(nombreJugador).strip().lower()
+            nom = ""
+            tot = {"j": 0, "g": 0, "p": 0, "e": 0}
+            pj = {}
+            pd = {}
+            lis = []
+            ec = 0
+            i = 0
+            while i < len(d):
+                pt = d[i]
+                aux = "Player"
+                for jg in pt["gameState"]["players"]:
+                    if jg["isAI"] == False:
+                        aux = jg["name"]
+                aux = aux.strip()
+                if aux.lower() == cl:
+                    if pt["gameState"]["status"] == "finished":
+                        if nom == "":
+                            nom = aux
+                        dif = "medium"
+                        if "difficulty" in pt.keys():
+                            if pt["difficulty"] != None and pt["difficulty"] != "":
+                                dif = pt["difficulty"]
+                        tot["j"] = tot["j"] + 1
+                        ex = False
+                        for c in pj.keys():
+                            if c == pt["gameType"]:
+                                ex = True
+                        if ex == False:
+                            pj[pt["gameType"]] = {"j": 0, "g": 0, "p": 0, "e": 0}
+                        pj[pt["gameType"]]["j"] = pj[pt["gameType"]]["j"] + 1
+                        ex = False
+                        for c in pd.keys():
+                            if c == dif:
+                                ex = True
+                        if ex == False:
+                            pd[dif] = {"j": 0, "g": 0, "p": 0, "e": 0}
+                        pd[dif]["j"] = pd[dif]["j"] + 1
+                        rs = ""
+                        if "winner" in pt["gameState"].keys():
+                            if pt["gameState"]["winner"] == "player1":
+                                tot["g"] = tot["g"] + 1
+                                pj[pt["gameType"]]["g"] = pj[pt["gameType"]]["g"] + 1
+                                pd[dif]["g"] = pd[dif]["g"] + 1
+                                rs = "victoria"
+                            else:
+                                if pt["gameState"]["winner"] == "ai":
+                                    tot["p"] = tot["p"] + 1
+                                    pj[pt["gameType"]]["p"] = pj[pt["gameType"]]["p"] + 1
+                                    pd[dif]["p"] = pd[dif]["p"] + 1
+                                    rs = "derrota"
+                                else:
+                                    if pt["gameState"]["winner"] == "draw":
+                                        tot["e"] = tot["e"] + 1
+                                        pj[pt["gameType"]]["e"] = pj[pt["gameType"]]["e"] + 1
+                                        pd[dif]["e"] = pd[dif]["e"] + 1
+                                        rs = "empate"
+                        lis.append({"idPartida": pt["gameState"]["id"], "tipoJuego": pt["gameType"], "dificultad": dif, "resultado": rs, "terminadaEn": pt["gameState"]["updatedAt"]})
+                    else:
+                        ec = ec + 1
+                i = i + 1
+            if tot["j"] > 0:
+                pj2 = {}
+                ks = list(pj.keys())
+                i = 0
+                while i < len(ks):
+                    pj2[ks[i]] = {"jugadas": pj[ks[i]]["j"], "ganadas": pj[ks[i]]["g"], "perdidas": pj[ks[i]]["p"], "empatadas": pj[ks[i]]["e"], "porcentajeVictorias": round(pj[ks[i]]["g"] / pj[ks[i]]["j"] * 1000) / 10}
+                    i = i + 1
+                pd2 = {}
+                ks = list(pd.keys())
+                i = 0
+                while i < len(ks):
+                    pd2[ks[i]] = {"jugadas": pd[ks[i]]["j"], "ganadas": pd[ks[i]]["g"], "perdidas": pd[ks[i]]["p"], "empatadas": pd[ks[i]]["e"], "porcentajeVictorias": round(pd[ks[i]]["g"] / pd[ks[i]]["j"] * 1000) / 10}
+                    i = i + 1
+                lis.reverse()
+                rch = None
+                i = 0
+                while i < len(lis):
+                    if rch == None:
+                        rch = {"resultado": lis[i]["resultado"], "cantidad": 1}
+                    else:
+                        if lis[i]["resultado"] == rch["resultado"]:
+                            rch["cantidad"] = rch["cantidad"] + 1
+                        else:
+                            break
+                    i = i + 1
+                res = {"jugador": nom, "totales": {"jugadas": tot["j"], "ganadas": tot["g"], "perdidas": tot["p"], "empatadas": tot["e"], "porcentajeVictorias": round(tot["g"] / tot["j"] * 1000) / 10}, "porJuego": pj2, "porDificultad": pd2, "rachaActual": rch, "ultimosResultados": lis[:5], "enCurso": ec}
+                return json.dumps(res, indent=2, ensure_ascii=False)
+            else:
+                raise ToolError('No se encontraron partidas terminadas del jugador "' + str(nombreJugador) + '"')
         else:
-            break
-    res = {"player": nm, "totals": t, "byGame": bg, "byDifficulty": bd, "currentStreak": st, "lastResults": arr[:5], "inProgress": ip}
-    return json.dumps(res, indent=2)
+            raise ToolError("No se encontró la base de datos de partidas en " + rb + ". Levantá la web y jugá una partida para crearla.")
+    else:
+        raise ToolError("nombreJugador es obligatorio")
 
 
-@mcp.tool()
-def get_ai_performance(gameType: str | None = None) -> str:
-    """How often the AI wins, loses and draws on each difficulty (only finished games). Optional filter: gameType (tic-tac-toe, rock-paper-scissors, connect-four)"""
-    if gameType and gameType != "tic-tac-toe" and gameType != "rock-paper-scissors" and gameType != "connect-four":
-        raise ToolError("Invalid gameType: " + gameType)
-    if not os.path.exists(p):
-        raise ToolError("Games database not found at " + p + ". Play a game in the web app or run: uv run python seed.py")
-    db = sqlite3.connect(Path(p).resolve().as_uri() + "?mode=ro", uri=True)
-    d = []
-    try:
-        x = db.execute("SELECT game_session FROM tic_tac_toe_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    try:
-        x = db.execute("SELECT game_session FROM rps_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    try:
-        x = db.execute("SELECT game_session FROM connect_four_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    db.close()
-    o = {}
-    n = 0
-    for i in range(len(d)):
-        g = d[i]
-        if g["gameState"]["status"] != "finished":
-            continue
-        if gameType and g["gameType"] != gameType:
-            continue
-        n = n + 1
-        df = g.get("difficulty") or "medium"
-        if df not in o:
-            o[df] = {"difficulty": df, "played": 0, "aiWins": 0, "aiLosses": 0, "draws": 0}
-        o[df]["played"] = o[df]["played"] + 1
-        if g["gameState"].get("winner") == "ai":
-            o[df]["aiWins"] = o[df]["aiWins"] + 1
-        elif g["gameState"].get("winner") == "player1":
-            o[df]["aiLosses"] = o[df]["aiLosses"] + 1
-        elif g["gameState"].get("winner") == "draw":
-            o[df]["draws"] = o[df]["draws"] + 1
-    r = []
-    lv = ["easy", "medium", "hard"]
-    for i in range(len(lv)):
-        if lv[i] in o:
-            o[lv[i]]["aiWinRate"] = round(o[lv[i]]["aiWins"] / o[lv[i]]["played"] * 1000) / 10
-            r.append(o[lv[i]])
-    res = {"filters": {"gameType": gameType or "all"}, "byDifficulty": r}
-    if n == 0:
-        res["message"] = "No finished games yet. Play a game in the web app or run: uv run python seed.py"
-    return json.dumps(res, indent=2)
+@s.tool(description="Cuántas veces gana, pierde y empata la IA en cada dificultad (solo partidas terminadas). Filtro opcional: tipoJuego (tic-tac-toe, rock-paper-scissors, connect-four)")
+def obtener_rendimiento_ia(tipoJuego=None):
+    if tipoJuego == None or tipoJuego == "" or tipoJuego == "tic-tac-toe" or tipoJuego == "rock-paper-scissors" or tipoJuego == "connect-four":
+        if os.path.exists(rb):
+            cx = sqlite3.connect(Path(rb).resolve().as_uri() + "?mode=ro", uri=True)
+            d = []
+            try:
+                fl = cx.execute("SELECT game_session FROM tic_tac_toe_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            try:
+                fl = cx.execute("SELECT game_session FROM rps_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            try:
+                fl = cx.execute("SELECT game_session FROM connect_four_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            cx.close()
+            o = {}
+            n = 0
+            i = 0
+            while i < len(d):
+                pt = d[i]
+                if pt["gameState"]["status"] == "finished":
+                    if tipoJuego == None or tipoJuego == "" or pt["gameType"] == tipoJuego:
+                        n = n + 1
+                        dif = "medium"
+                        if "difficulty" in pt.keys():
+                            if pt["difficulty"] != None and pt["difficulty"] != "":
+                                dif = pt["difficulty"]
+                        ex = False
+                        for c in o.keys():
+                            if c == dif:
+                                ex = True
+                        if ex == False:
+                            o[dif] = {"j": 0, "vi": 0, "di": 0, "e": 0}
+                        o[dif]["j"] = o[dif]["j"] + 1
+                        if "winner" in pt["gameState"].keys():
+                            if pt["gameState"]["winner"] == "ai":
+                                o[dif]["vi"] = o[dif]["vi"] + 1
+                            else:
+                                if pt["gameState"]["winner"] == "player1":
+                                    o[dif]["di"] = o[dif]["di"] + 1
+                                else:
+                                    if pt["gameState"]["winner"] == "draw":
+                                        o[dif]["e"] = o[dif]["e"] + 1
+                i = i + 1
+            lis = []
+            niv = ["easy", "medium", "hard"]
+            i = 0
+            while i < len(niv):
+                ex = False
+                for c in o.keys():
+                    if c == niv[i]:
+                        ex = True
+                if ex == True:
+                    lis.append({"dificultad": niv[i], "jugadas": o[niv[i]]["j"], "victoriasIA": o[niv[i]]["vi"], "derrotasIA": o[niv[i]]["di"], "empates": o[niv[i]]["e"], "porcentajeVictoriasIA": round(o[niv[i]]["vi"] / o[niv[i]]["j"] * 1000) / 10})
+                i = i + 1
+            tj = "todos"
+            if tipoJuego != None and tipoJuego != "":
+                tj = tipoJuego
+            res = {"filtros": {"tipoJuego": tj}, "porDificultad": lis}
+            if n == 0:
+                res["mensaje"] = "Todavía no hay partidas terminadas. Jugá una partida en la web."
+            return json.dumps(res, indent=2, ensure_ascii=False)
+        else:
+            raise ToolError("No se encontró la base de datos de partidas en " + rb + ". Levantá la web y jugá una partida para crearla.")
+    else:
+        raise ToolError("tipoJuego inválido: " + str(tipoJuego))
 
 
-@mcp.tool()
-def get_recent_games(limit: int = 10, gameType: str | None = None, playerName: str | None = None) -> str:
-    """Latest finished games, newest first. Optional filters: limit (default 10), gameType (tic-tac-toe, rock-paper-scissors, connect-four), playerName"""
-    if gameType and gameType != "tic-tac-toe" and gameType != "rock-paper-scissors" and gameType != "connect-four":
-        raise ToolError("Invalid gameType: " + gameType)
-    if not os.path.exists(p):
-        raise ToolError("Games database not found at " + p + ". Play a game in the web app or run: uv run python seed.py")
-    db = sqlite3.connect(Path(p).resolve().as_uri() + "?mode=ro", uri=True)
-    d = []
-    try:
-        x = db.execute("SELECT game_session FROM tic_tac_toe_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    try:
-        x = db.execute("SELECT game_session FROM rps_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    try:
-        x = db.execute("SELECT game_session FROM connect_four_games").fetchall()
-        for i in range(len(x)):
-            d.append(json.loads(x[i][0]))
-    except Exception:
-        pass
-    db.close()
-    d.sort(key=lambda x: x["gameState"]["updatedAt"], reverse=True)
-    r = []
-    for i in range(len(d)):
-        g = d[i]
-        if g["gameState"]["status"] != "finished":
-            continue
-        if gameType and g["gameType"] != gameType:
-            continue
-        pn = "Player"
-        for pl in g["gameState"]["players"]:
-            if not pl["isAI"]:
-                pn = pl["name"]
-        pn = pn.strip()
-        if playerName and pn.lower() != playerName.strip().lower():
-            continue
-        rs = "draw"
-        if g["gameState"].get("winner") == "player1":
-            rs = "win"
-        if g["gameState"].get("winner") == "ai":
-            rs = "loss"
-        sc = None
-        if g["gameType"] == "rock-paper-scissors" and g["gameState"].get("scores"):
-            sc = str(g["gameState"]["scores"].get("player1", 0)) + "-" + str(g["gameState"]["scores"].get("ai", 0))
-        r.append({"gameId": g["gameState"]["id"], "gameType": g["gameType"], "player": pn, "difficulty": g.get("difficulty") or "medium", "result": rs, "score": sc, "finishedAt": g["gameState"]["updatedAt"]})
-        if len(r) >= limit:
-            break
-    res = {"games": r}
-    if len(r) == 0:
-        res["message"] = "No finished games found"
-    return json.dumps(res, indent=2)
+@s.tool(description="Últimas partidas terminadas, de la más nueva a la más vieja. Filtros opcionales: limite (por defecto 10), tipoJuego (tic-tac-toe, rock-paper-scissors, connect-four), nombreJugador")
+def obtener_partidas_recientes(limite=10, tipoJuego=None, nombreJugador=None):
+    if tipoJuego == None or tipoJuego == "" or tipoJuego == "tic-tac-toe" or tipoJuego == "rock-paper-scissors" or tipoJuego == "connect-four":
+        if os.path.exists(rb):
+            cx = sqlite3.connect(Path(rb).resolve().as_uri() + "?mode=ro", uri=True)
+            d = []
+            try:
+                fl = cx.execute("SELECT game_session FROM tic_tac_toe_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            try:
+                fl = cx.execute("SELECT game_session FROM rps_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            try:
+                fl = cx.execute("SELECT game_session FROM connect_four_games").fetchall()
+                i = 0
+                while i < len(fl):
+                    d.append(json.loads(fl[i][0]))
+                    i = i + 1
+            except Exception:
+                pass
+            cx.close()
+            d.sort(key=lambda x: x["gameState"]["updatedAt"], reverse=True)
+            lis = []
+            i = 0
+            while i < len(d):
+                pt = d[i]
+                if pt["gameState"]["status"] == "finished":
+                    if tipoJuego == None or tipoJuego == "" or pt["gameType"] == tipoJuego:
+                        nom = "Player"
+                        for jg in pt["gameState"]["players"]:
+                            if jg["isAI"] == False:
+                                nom = jg["name"]
+                        nom = nom.strip()
+                        if nombreJugador == None or str(nombreJugador).strip() == "" or nom.lower() == str(nombreJugador).strip().lower():
+                            rs = "empate"
+                            if "winner" in pt["gameState"].keys():
+                                if pt["gameState"]["winner"] == "player1":
+                                    rs = "victoria"
+                                else:
+                                    if pt["gameState"]["winner"] == "ai":
+                                        rs = "derrota"
+                            mrc = None
+                            if pt["gameType"] == "rock-paper-scissors":
+                                if "scores" in pt["gameState"].keys():
+                                    if pt["gameState"]["scores"] != None:
+                                        a1 = 0
+                                        a2 = 0
+                                        if "player1" in pt["gameState"]["scores"].keys():
+                                            a1 = pt["gameState"]["scores"]["player1"]
+                                        if "ai" in pt["gameState"]["scores"].keys():
+                                            a2 = pt["gameState"]["scores"]["ai"]
+                                        mrc = str(a1) + "-" + str(a2)
+                            dif = "medium"
+                            if "difficulty" in pt.keys():
+                                if pt["difficulty"] != None and pt["difficulty"] != "":
+                                    dif = pt["difficulty"]
+                            lis.append({"idPartida": pt["gameState"]["id"], "tipoJuego": pt["gameType"], "jugador": nom, "dificultad": dif, "resultado": rs, "marcador": mrc, "terminadaEn": pt["gameState"]["updatedAt"]})
+                            if len(lis) >= int(str(limite)):
+                                break
+                i = i + 1
+            res = {"partidas": lis}
+            if len(lis) == 0:
+                res["mensaje"] = "No se encontraron partidas terminadas"
+            return json.dumps(res, indent=2, ensure_ascii=False)
+        else:
+            raise ToolError("No se encontró la base de datos de partidas en " + rb + ". Levantá la web y jugá una partida para crearla.")
+    else:
+        raise ToolError("tipoJuego inválido: " + str(tipoJuego))
 
 
 if __name__ == "__main__":
-    mcp.run()
+    s.run()

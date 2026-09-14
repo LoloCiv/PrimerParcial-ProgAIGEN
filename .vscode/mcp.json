@@ -2,14 +2,24 @@
   "servers": {
     "turn-based-games": {
       "command": "node",
-      "args": ["dist/server.js"],
-      "cwd": "./mcp-server"
+			"args": [
+				"dist/server.js"
+			],
+			"cwd": "./mcp-server",
+			"type": "stdio"
     },
     "playwright": {
       "command": "npx",
       "args": [
         "@playwright/mcp@latest"
-      ]
-    }
-  }
-}
+			],
+			"type": "stdio"
+		},
+		"game-stats": {
+			"type": "stdio",
+			"command": "uv",
+			"args": ["run", "--directory", "${workspaceFolder}/stats-mcp", "python", "server.py"]
+		}
+	},
+	"inputs": []
+} 

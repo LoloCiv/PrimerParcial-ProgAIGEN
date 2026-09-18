@@ -1,198 +1,135 @@
-# Turn-Based Games Web App and MCP Server
+# MCP en videojuegos
 
-This app is intended as a demo to showcase an example of MCP visually. It is not intended to be a production-ready application, but a learning tool for developers interested in building with the Model Context Protocol (MCP). 
+**Parcial 1 · Programación con IA Generativa**
+Laureano Civetta · Ingeniería en Inteligencia Artificial
 
-It is a modern turn-based games platform featuring a Next.js 15 frontend (and API), as well as an MCP (Model Context Protocol) server that can interact with the API and act as an AI opponent.
+Juegos por turnos contra la IA usando **Model Context Protocol (MCP)**. Claude Code juega las partidas a través de un servidor MCP, y GitHub Copilot consulta el historial de resultados a través de un segundo servidor MCP.
 
-## Features
+## De qué se trata
 
-- **Next.js Web Application**: Modern, responsive UI built with TailwindCSS 4
-- **MCP Server**: AI opponent powered by Model Context Protocol
-- **Shared Logic**: Common game logic and types across all packages
-- **Multiple Games**: Tic-Tac-Toe, Rock Paper Scissors and Connect Four (extensible for more)
-- **AI Difficulty Levels**: Easy, Medium, and Hard AI opponents
-- **Real-time Gameplay**: Smooth, interactive game experience
-- **Comprehensive Testing**: Hundreds of test cases across all workspaces with high coverage on core logic
-- **Professional Documentation**: Full TSDoc documentation and testing guidelines
-- **Component Architecture**: Reusable UI patterns and shared components
+El punto de partida es **turn-based-mcp**, un demo que encontré en [mcpmarket.com](https://mcpmarket.com), dentro de la categoría de videojuegos. Trae una web en Next.js con Ta-Te-Ti y Piedra, Papel o Tijera, y un servidor MCP en TypeScript que le permite a un agente jugar contra el usuario.
 
-## Project Structure
+Sobre esa base hice tres cosas:
+
+1. **Agregué el 4 en línea** a la web y al MCP de juegos, con una IA en tres dificultades. La difícil usa minimax con poda alfa-beta y mira 6 jugadas hacia adelante.
+2. **Armé un segundo servidor MCP en Python** (`stats-mcp/`) que lee el historial de partidas y responde quién gana y quién pierde.
+3. **Refactoricé ese servidor con Copilot** (modo Plan y modo Agent): partió de un código deliberadamente desprolijo y quedó modular, tipado y documentado, sin cambiar lo que devuelven las tools.
 
 ```
-turn-based-mcp/
-├── shared/                       # Shared types, utilities, and game logic
-├── web/                         # Next.js frontend application  
-│   ├── src/components/
-│   │   ├── games/              # Game-specific components
-│   │   ├── ui/                 # Reusable UI components
-│   │   └── shared/             # MCP and game-related shared components
-│   └── src/app/
-│       ├── api/games/          # API routes for game management
-│       └── games/              # Game-specific pages
-├── mcp-server/                  # MCP server for AI opponent
-├── docs/                        # Documentation and guidelines  
-├── package.json                 # Root package.json with workspaces
-└── README.md
+Claude Code ──► MCP de juegos (TypeScript, stdio) ──► API de la web (:3000) ──► web/games.db
+GitHub Copilot ──► MCP de estadísticas (Python, stdio) ─────────── solo lectura ──┘
 ```
 
-## Games
+El MCP de juegos nunca toca la base: lee y guarda las partidas a través de la API de la web. El de estadísticas abre `web/games.db` directamente, en modo solo lectura.
 
-### Tic-Tac-Toe
-- Classic 3x3 grid game
-- AI difficulty levels: Easy (random), Medium (strategic), Hard (minimax)
-- Real-time move validation and game state updates
+## Requisitos
 
-### Rock Paper Scissors
-- Best of 3 rounds format
-- AI strategies: Random, Adaptive (learns from patterns), Pattern-based
-- Score tracking and round history
+- **Node.js 24** (con Node 20 falla `better-sqlite3`) y npm
+- **Python 3.12+** y [uv](https://docs.astral.sh/uv/)
+- **Claude Code** para el MCP de juegos
+- **VS Code con GitHub Copilot** para el MCP de estadísticas
 
-### Connect Four
-- Classic 6x7 grid: discs fall to the lowest empty cell of the chosen column
-- Win with four in a row horizontally, vertically or diagonally
-- AI difficulty levels: Easy (random), Medium (win/block/center), Hard (minimax with alpha-beta, 6 moves ahead)
-- Choose your disc colour: red moves first, yellow lets the AI start
+## Instalación
 
-## API Endpoints
-
-### Tic-Tac-Toe
-- `GET /api/games/tic-tac-toe` - List all games
-- `POST /api/games/tic-tac-toe` - Create new game
-- `POST /api/games/tic-tac-toe/[id]/move` - Make a move
-- `GET /api/games/tic-tac-toe/mcp` - MCP integration endpoint (sanitized data)
-
-### Rock Paper Scissors
-- `GET /api/games/rock-paper-scissors` - List all games
-- `POST /api/games/rock-paper-scissors` - Create new game  
-- `POST /api/games/rock-paper-scissors/[id]/move` - Make a move
-- `GET /api/games/rock-paper-scissors/mcp` - MCP integration endpoint (sanitized data)
-
-### Connect Four
-- `GET /api/games/connect-four` - List all games
-- `POST /api/games/connect-four` - Create new game (`playerName`, `difficulty`, `playerColor`)
-- `DELETE /api/games/connect-four?gameId=...` - Delete a game
-- `POST /api/games/connect-four/[id]/move` - Make a move (`{ move: { column: 0-6 }, playerId }`)
-- `GET /api/games/connect-four/mcp` - MCP integration endpoint
-
-## MCP Tools
-
-### Available Tools
-- `create_tic_tac_toe_game` - Create new Tic-Tac-Toe game
-- `play_tic_tac_toe` - Make AI move in Tic-Tac-Toe
-- `create_rock_paper_scissors_game` - Create new Rock Paper Scissors game
-- `play_rock_paper_scissors` - Make AI choice in Rock Paper Scissors
-- `wait_for_player_move` - Wait for human player to make their move
-- `analyze_game` - Analyze current game state and provide insights
-
-### MCP Configuration
-
-The project includes VS Code MCP configuration in `.vscode/mcp.json`:
-
-```json
-{
-  "servers": {
-    "turn-based-games": {
-      "command": "node",
-      "args": ["dist/index.js"],
-      "cwd": "./mcp-server"
-    }
-  }
-}
-```
-
-To use the MCP server, ensure it's built first:
 ```bash
+npm install
+npm run build --workspace=shared
 npm run build --workspace=mcp-server
+uv sync --directory stats-mcp
 ```
 
-## Getting Started
+Levantar la web (queda en `http://localhost:3000`):
 
-### Prerequisites
-
-- Node.js 18 or higher
-- npm or pnpm
-
-### Installation
-
-1. Clone the repository and install dependencies:
 ```bash
-npm install
+npm run dev
 ```
 
-2. Build the shared package (required first):
+## Configuración de los MCP
+
+Cada cliente lee su propio archivo de configuración. Los dos están incluidos en el repo.
+
+### MCP de juegos en Claude Code · `.mcp.json`
+
+Se generó con este comando, desde la raíz del proyecto:
+
 ```bash
-npm run build --workspace=shared
+claude mcp add --scope project turn-based-games -- node mcp-server/dist/server.js
 ```
 
-> **Important**: The shared package must be built before other packages can be developed or built, as both web and mcp-server depend on it.
+Para verificar que está conectado: `claude mcp list` en la terminal, o `/mcp` dentro de la sesión de Claude. La web tiene que estar corriendo.
 
-3. Start the development servers:
+| Tool | Qué hace |
+|------|----------|
+| `create_game` | Crea una partida (`tic-tac-toe`, `rock-paper-scissors` o `connect-four`) |
+| `play_game` | Calcula y juega el turno de la IA |
+| `make_player_move` | Registra la jugada del humano dicha por el chat |
+| `wait_for_player_move` | Espera a que el humano juegue desde la web |
+| `analyze_game` | Describe el estado de una partida |
 
-**Frontend (Next.js):**
+### MCP de estadísticas en Copilot · `.vscode/mcp.json`
+
+Se agregó con `Ctrl+Shift+P` → **MCP: Add Server** → **Command (stdio)**, guardado en **Workspace**, con este comando:
+
+```
+uv run --directory ${workspaceFolder}/stats-mcp python server.py
+```
+
+Después se inicia con **Start** y se activa en el chat de Copilot (modo Agent → herramientas).
+
+| Tool | Qué devuelve |
+|------|--------------|
+| `obtener_ranking` | Ranking por victorias y porcentaje. Filtros: `tipoJuego`, `dificultad`, `limite` |
+| `obtener_estadisticas_jugador` | Totales por juego y dificultad, racha actual y últimos resultados |
+| `obtener_rendimiento_ia` | Victorias, derrotas y empates de la IA en cada dificultad |
+| `obtener_partidas_recientes` | Últimas partidas terminadas. Filtros: `limite`, `tipoJuego`, `nombreJugador` |
+
+## Uso
+
+1. Con la web levantada, pedirle a Claude una partida, por ejemplo: *"Creá una partida de 4 en línea en dificultad difícil, soy rojo, y jugá en loop con play_game y wait_for_player_move"*.
+2. Entrar a la partida en la web con **Join by ID** y jugar. Al terminar, el resultado queda guardado en `web/games.db`.
+3. Preguntarle a Copilot en modo Agent, por ejemplo: *"Usando game-stats, ¿cuáles son mis partidas recientes?"*.
+
+`web/games.db` no se sube al repo, así que en una instalación nueva arranca vacía: hay que jugar al menos una partida antes de consultar estadísticas.
+
+## Código inicial vs. código final
+
+El historial de git muestra cada etapa:
+
+| Commit | Qué contiene |
+|--------|--------------|
+| `5a7ee6f` | Repo original, sin modificaciones |
+| `dd06896` | Se agrega el 4 en línea (juego, IA, tools del MCP, web y tests) |
+| `fd07ac1` | `stats-mcp/server.py` en su versión inicial, antes del refactor |
+| `0e52957` | Configuración de los MCP y `server.py` refactorizado |
+
+Para comparar el servidor de estadísticas antes y después:
+
 ```bash
-npm run dev --workspace=web
+git diff fd07ac1 0e52957 -- stats-mcp/server.py
 ```
 
-**MCP Server:**
-```bash
-npm run dev --workspace=mcp-server
+| Métrica de `server.py` | Antes | Después |
+|------------------------|-------|---------|
+| Niveles de anidamiento | 11 | 4 |
+| Bucles `while` manuales | 22 | 0 |
+| Consultas SQL copiadas | 12 | 1 |
+| Líneas de la función más larga | 125 | 55 |
+| Funciones | 4 | 23 |
+| Funciones con type hints y docstring | 0 | 23 |
+
+## Estructura
+
+```
+├── shared/        Lógica de los juegos, tipos y acceso a SQLite
+├── web/           Web en Next.js y API de partidas (guarda en web/games.db)
+├── mcp-server/    MCP de juegos en TypeScript (tools, IA de cada juego)
+├── stats-mcp/     MCP de estadísticas en Python
+├── .mcp.json      Configuración del MCP de juegos para Claude Code
+└── .vscode/mcp.json  Configuración del MCP de estadísticas para Copilot
 ```
 
-### Development
+Tests del monorepo: `npm run test`.
 
-- **Frontend**: Visit `http://localhost:3000` to access the web application
-- **MCP Server**: The server runs on stdio and can be integrated with MCP-compatible clients
+## Créditos
 
-## Development Workflow
-
-### Adding New Games
-1. **Implement game logic** in `shared/src/games/`
-2. **Create UI components** in `web/src/components/games/`
-3. **Add game page** in `web/src/app/games/[game-type]/`
-4. **Add API routes** in `web/src/app/api/games/[game-type]/`
-5. **Implement AI** in `mcp-server/src/ai/`
-6. **Add MCP tools** in `mcp-server/src/server.ts`
-7. **Write comprehensive tests** for all components
-8. **Update documentation** with new game details
-
-### Code Quality Standards
-- **TypeScript Strict Mode**: Full compliance across all workspaces
-- **ESLint Rules**: Consistent code style and best practices
-- **Test Coverage**: Target 90% for shared logic, 80% for web components
-- **Documentation**: TSDoc comments for all public APIs
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes in the appropriate package
-4. Ensure all packages build successfully and tests pass
-5. Write tests for new functionality
-6. Update documentation as needed
-7. Submit a pull request
-
-### Development Setup
-```bash
-# Install dependencies
-npm install
-
-# Build shared package first (required)
-npm run build --workspace=shared
-
-# Start development servers
-npm run dev --workspace=web       # Web app on :3000
-npm run dev --workspace=mcp-server # MCP server (stdio)
-```
-
-### Alternative Commands
-```bash
-# Root-level shortcuts
-npm run dev        # Runs web dev server
-npm run dev:mcp    # Runs MCP server
-npm run build      # Builds all packages
-npm run test       # Runs all tests
-```
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
+Basado en *turn-based-mcp*, un demo de MCP con licencia MIT. El 4 en línea, el servidor `stats-mcp` y la configuración de los MCP son agregados de este parcial.
